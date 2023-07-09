@@ -1,0 +1,1 @@
+export const  generateId = ()=> (""+Math.random()).substring(2,7);

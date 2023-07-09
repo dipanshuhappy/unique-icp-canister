@@ -1,0 +1,17 @@
+type ChessGame = record {
+  id : text;
+  fen : text;
+  turn : Turn;
+  history : opt text;
+  board : text;
+  is_checkmate : bool;
+};
+type Turn = variant { Black; White };
+type _AzleResult = variant { Ok : text; Err : text };
+service : () -> {
+  black_move : (text, text, text, opt text) -> (_AzleResult);
+  clearTimer : (nat64) -> ();
+  createGame : (text) -> (ChessGame);
+  get_board : (text) -> (_AzleResult) query;
+  white_move : (text, text, text, opt text) -> (_AzleResult);
+}
