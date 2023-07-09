@@ -1,32 +1,32 @@
-**Constants**
+## Constants
 
-* `chess`: An instance of the `Chess` library.
-* `DELAY`: A constant that represents the delay in seconds before checking for checkmate.
+# `chess`: An instance of the `Chess` library.
+# `DELAY`: A constant that represents the delay in seconds before checking for checkmate.
 
-**State**
+## State
 
-* `games`: A `StableBTreeMap` that stores the game state for each user.
+# `games`: A `StableBTreeMap` that stores the game state for each user.
 
-**Classes**
+## Classes
 
-* `Game`: A class that represents a chess game.
+# `Game`: A class that represents a chess game.
 
-**Functions**
+## Functions
 
-* `createGame()`: Creates a new chess game for the specified user.
-* `get_board()`: Gets the board state for the specified user.
-* `white_move()`: Makes a move for the white player.
-* `black_move()`: Makes a move for the black player.
-* `claerTimer()`: Clears the timer for the specified user.
+# `createGame()`: Creates a new chess game for the specified user.
+# `get_board()`: Gets the board state for the specified user.
+# `white_move()`: Makes a move for the white player.
+# `black_move()`: Makes a move for the black player.
+# `claerTimer()`: Clears the timer for the specified user.
 
-**Documentation**
+## Documentation
 
-* The `chess` library is used to play chess.
-* The `DELAY` constant is used to determine how often the game is checked for checkmate.
-* The `games` state variable stores the game state for each user.
-* The `Game` class represents a chess game.
-* The `createGame()` function creates a new chess game for the specified user.
-* The `get_board()` function gets the board state for the specified user.
-* The `white_move()` function makes a move for the white player.
-* The `black_move()` function makes a move for the black player.
-* The `claerTimer()` function clears the timer for the specified user.
+# The `chess` library is used to play chess.
+# The `DELAY` constant is used to determine how often the game is checked for checkmate.
+# The `games` state variable stores the game state for each user.
+# The `Game` class represents a chess game.
+# The `createGame()` function creates a new chess game for the specified user.
+# The `get_board()` function gets the board state for the specified user.
+# The `white_move()` function makes a move for the white player.
+# The `black_move()` function makes a move for the black player.
+# The `claerTimer()` function clears the timer for the specified user.
