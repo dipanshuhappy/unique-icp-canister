@@ -1,4 +1,4 @@
-import { $query, $update, Record, TimerId, StableBTreeMap, Variant, Vec, match, Result, nat64, ic, Opt } from 'azle';
+import { $query, $update, TimerId, StableBTreeMap, match, Result, ic, Opt } from 'azle';
 import { Chess } from 'chess.js';
 import { ChessGame } from './types';
 import { generateId } from './utils';
@@ -16,101 +16,64 @@ class Game {
   /**
    * Initialize the Chess Object 
    */
-  static init(){
+  static init(): ChessGame {
     return {
-        id: generateId(),
-        board: chess.ascii(),
-        fen: chess.fen(),
-        history: {
-            None: null
-        },
-        turn:{
-            White:null,
-            Black:undefined
-
-        },
-        is_checkmate:false
-
-    } as ChessGame
+      id: generateId(),
+      board: chess.ascii(),
+      fen: chess.fen(),
+      history: { None: null },
+      turn: { White: undefined, Black: null },
+      is_checkmate: false
+    };
   }
+
   /**
-   * Move a white piece in the chess game.
+   * Move a piece in the chess game.
    * @param game The chess game object.
    * @param username The username of the player making the move.
    * @param from The starting position of the piece.
    * @param to The destination position of the piece.
    * @param promotions The optional promotion for the piece (if any).
+   * @param isWhiteMove Indicates if it's a white player's move.
    * @returns A `Result` object containing either the updated board state or an error message.
    */
-  static moveWhite(game: ChessGame, username: string, from: string, to: string, promotions: Opt<string>): Result<string, string> {
-    if (game.turn.Black === null) {
+  static movePiece(
+    game: ChessGame,
+    username: string,
+    from: string,
+    to: string,
+    promotions: Opt<string>,
+    isWhiteMove: boolean
+  ): Result<string, string> {
+    if (isWhiteMove && game.turn.White === null) {
       return Result.Err<string, string>("Not your turn");
     }
+    if (!isWhiteMove && game.turn.Black === null) {
+      return Result.Err<string, string>("Not your turn");
+    }
+
     chess.load(game.fen);
-    const unwrapped_promotion = match(promotions, {
-      Some: (promotion) => promotion,
-      None: () => undefined
-    });
+    const unwrappedPromotion = promotions.unwrapOrUndefined();
     let move;
     try {
-      move = chess.move({ from: from, to: to, promotion: unwrapped_promotion });
+      move = chess.move({ from, to, promotion: unwrappedPromotion });
     } catch (error) {
       return Result.Err<string, string>(`${error}`);
     }
+
     if (move) {
       game.board = chess.ascii();
       game.fen = chess.fen();
-      game.turn = {
-        Black: null,
-        White: undefined
-      };
+      game.turn.White = isWhiteMove ? undefined : null;
+      game.turn.Black = isWhiteMove ? null : undefined;
       if (game.is_checkmate) {
-        return Result.Ok<string, string>(`${game.board} \n Checkmate !`);
+        return Result.Ok<string, string>(`${game.board}\nCheckmate!`);
       }
       games.insert(username, game);
       return Result.Ok<string, string>(game.board);
     }
-    return Result.Err<string, string>("Invalid move");
-  }
 
-  /**
-   * Move a black piece in the chess game.
-   * @param game The chess game object.
-   * @param username The username of the player making the move.
-   * @param from The starting position of the piece.
-   * @param to The destination position of the piece.
-   * @param promotions The optional promotion for the piece (if any).
-   * @returns A `Result` object containing either the updated board state or an error message.
-   */
-  static moveBlack(game: ChessGame, username: string, from: string, to: string, promotions: Opt<string>): Result<string, string> {
-    if (game.turn.White === null) {
-      return Result.Err<string, string>("Not your turn");
-    }
-    chess.load(game.fen);
-    const unwrapped_promotion = match(promotions, {
-      Some: (promotion) => promotion,
-      None: () => undefined
-    });
-    let move;
-    try {
-      move = chess.move({ from: from, to: to, promotion: unwrapped_promotion });
-    } catch (error) {
-      return Result.Err<string, string>(`${error}`);
-    }
-    if (!move) {
-      return Result.Err<string, string>("Invalid move");
-    }
-    game.board = chess.ascii();
-    game.fen = chess.fen();
-    game.turn = {
-      White: null,
-      Black: undefined
-    };
-    if (game.is_checkmate) {
-      return Result.Ok<string, string>(`${game.board} \n Checkmate !`);
-    }
-    games.insert(username, game);
-    return Result.Ok<string, string>(game.board);
+    return Result.Err<string, string>("Invalid move");
   }
 }
 
@@ -121,9 +84,16 @@ class Game {
  */
 $update
 export function createGame(username: string): ChessGame {
-  const game = Game.init()
+  if (games.has(username)) {
+    throw new Error("Player already has an active game");
+  }
+
+  const game = Game.init();
+
   // Set a timer to check for checkmate
-  ic.setTimer(DELAY, () => setCheckMate(username));
+  const timerId = ic.setTimer(DELAY, () => setCheckMate(username));
+  console.log(`Timer ${timerId} set for user ${username}`);
+
   games.insert(username, game);
   return game;
 }
@@ -133,18 +103,14 @@ export function createGame(username: string): ChessGame {
  * @param username The username of the player to check.
  */
 function setCheckMate(username: string): void {
-  console.log("Checking for Check Mate");
-  let game = match(games.get(username), {
-    Some: (game) => game,
-    None: () => undefined
-  });
-  if (!game) {
-    return undefined;
-  }
-  chess.load(game.fen);
-  if (chess.isCheckmate()) {
-    game.is_checkmate = true;
-    games.insert(username, game);
+  console.log(`Checking for Check Mate - ${username}`);
+  const game = games.get(username);
+  if (game) {
+    chess.load(game.fen);
+    if (chess.isCheckmate()) {
+      game.is_checkmate = true;
+      games.insert(username, game);
+    }
   }
 }
 
@@ -154,11 +120,35 @@ function setCheckMate(username: string): void {
  * @returns A `Result` object containing either the board state or an error message.
  */
 $query
-export function get_board(username: string): Result<string, string> {
-  return match(games.get(username), {
-    Some: (game) => Result.Ok<string, string>(game.board),
-    None: () => Result.Err<string, string>("Game not found"),
-  });
+export function getBoard(username: string): Result<string, string> {
+  const game = games.get(username);
+  if (game) {
+    return Result.Ok<string, string>(game.board);
+  }
+  return Result.Err<string, string>("Game not found");
+}
+
+/**
+ * Make a move in the chess game.
+ * @param username The username of the player making the move.
+ * @param from The starting position of the piece.
+ * @param to The destination position of the piece.
+ * @param promotions The optional promotion for the piece (if any).
+ * @param isWhiteMove Indicates if it's a white player's move.
+ * @returns A `Result` object containing either the updated board state or an error message.
+ */
+function makeMove(
+  username: string,
+  from: string,
+  to: string,
+  promotions: Opt<string>,
+  isWhiteMove: boolean
+): Result<string, string> {
+  const game = games.get(username);
+  if (game) {
+    return Game.movePiece(game, username, from, to, promotions, isWhiteMove);
+  }
+  return Result.Err<string, string>("Game not found");
 }
 
 /**
@@ -170,11 +160,8 @@ export function get_board(username: string): Result<string, string> {
  * @returns A `Result` object containing either the updated board state or an error message.
  */
 $update
-export function white_move(username: string, from: string, to: string, promotions: Opt<string>): Result<string, string> {
-  return match(games.get(username), {
-    Some: (game) => Game.moveWhite(game, username, from, to, promotions),
-    None: () => Result.Err<string, string>("Game not found"),
-  });
+export function whiteMove(username: string, from: string, to: string, promotions: Opt<string>): Result<string, string> {
+  return makeMove(username, from, to, promotions, true);
 }
 
 /**
@@ -186,11 +173,8 @@ export function white_move(username: string, from: string, to: string, promotion
  * @returns A `Result` object containing either the updated board state or an error message.
  */
 $update
-export function black_move(username: string, from: string, to: string, promotions: Opt<string>): Result<string, string> {
-  return match(games.get(username), {
-    Some: (game) => Game.moveBlack(game, username, from, to, promotions),
-    None: () => Result.Err<string, string>("Game not found"),
-  });
+export function blackMove(username: string, from: string, to: string, promotions: Opt<string>): Result<string, string> {
+  return makeMove(username, from, to, promotions, false);
 }
 
 /**
@@ -198,7 +182,11 @@ export function black_move(username: string, from: string, to: string, promotion
  * @param timerId The ID of the timer to cancel.
  */
 $update
-export function clearTimer(timerId: TimerId): void{
-    ic.clearTimer(timerId);
-    console.log(`timer ${timerId} cancelled`);
+export function clearTimer(timerId: TimerId): void {
+  const timerCancelled = ic.clearTimer(timerId);
+  if (timerCancelled) {
+    console.log(`Timer ${timerId} cancelled`);
+  } else {
+    console.log(`Timer ${timerId} not found`);
+  }
 }
