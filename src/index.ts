@@ -1,4 +1,4 @@
-import { $query, $update, Record, TimerId, StableBTreeMap, Variant, Vec, match, Result, nat64, ic, Opt } from 'azle';
+import { $query, $update, TimerId, StableBTreeMap, match, Result, ic, Opt } from 'azle';
 import { Chess } from 'chess.js';
 import { ChessGame } from './types';
 import { generateId } from './utils';
@@ -6,7 +6,7 @@ import { generateId } from './utils';
 // Create an instance of the chess engine
 const chess = new Chess();
 // Delay in milliseconds for the timer
-const DELAY = BigInt(5);
+const DELAY = BigInt(5* 1000000);
 
 // Store the games in a stable B-tree map
 let games = new StableBTreeMap<string, ChessGame>(0, 1000, 1_000_000);
@@ -121,6 +121,9 @@ class Game {
  */
 $update
 export function createGame(username: string): ChessGame {
+  if(get_board(username).Ok){
+    return ic.trap(`A game with this username already exists`);
+  }
   const game = Game.init()
   // Set a timer to check for checkmate
   ic.setTimer(DELAY, () => setCheckMate(username));
@@ -133,7 +136,6 @@ export function createGame(username: string): ChessGame {
  * @param username The username of the player to check.
  */
 function setCheckMate(username: string): void {
-  console.log("Checking for Check Mate");
   let game = match(games.get(username), {
     Some: (game) => game,
     None: () => undefined
@@ -191,14 +193,4 @@ export function black_move(username: string, from: string, to: string, promotion
     Some: (game) => Game.moveBlack(game, username, from, to, promotions),
     None: () => Result.Err<string, string>("Game not found"),
   });
-}
-
-/**
- * Clear a timer by its ID.
- * @param timerId The ID of the timer to cancel.
- */
-$update
-export function clearTimer(timerId: TimerId): void{
-    ic.clearTimer(timerId);
-    console.log(`timer ${timerId} cancelled`);
 }
