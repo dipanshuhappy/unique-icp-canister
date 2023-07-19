@@ -5,7 +5,7 @@ import { generateId } from './utils';
 
 // Create an instance of the chess engine
 const chess = new Chess();
-// Delay in milliseconds for the timer
+// Delay in seconds for the timer
 const DELAY = BigInt(5);
 
 // Store the games in a stable B-tree map
