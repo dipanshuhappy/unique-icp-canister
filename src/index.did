@@ -9,9 +9,8 @@ type ChessGame = record {
 type Turn = variant { Black; White };
 type _AzleResult = variant { Ok : text; Err : text };
 service : () -> {
-  black_move : (text, text, text, opt text) -> (_AzleResult);
-  clearTimer : (nat64) -> ();
+  blackMove : (text, text, text, opt text) -> (_AzleResult);
   createGame : (text) -> (ChessGame);
-  get_board : (text) -> (_AzleResult) query;
-  white_move : (text, text, text, opt text) -> (_AzleResult);
+  getBoard : (text) -> (_AzleResult) query;
+  whiteMove : (text, text, text, opt text) -> (_AzleResult);
 }

@@ -1,11 +1,11 @@
-import { $query, $update, TimerId, StableBTreeMap, match, Result, ic, Opt } from 'azle';
+import { $query, $update, StableBTreeMap, Result, ic, Opt } from 'azle';
 import { Chess } from 'chess.js';
 import { ChessGame } from './types';
 import { generateId } from './utils';
 
 // Create an instance of the chess engine
 const chess = new Chess();
-// Delay in milliseconds for the timer
+// Delay in seconds for the timer
 const DELAY = BigInt(5);
 
 // Store the games in a stable B-tree map
@@ -53,7 +53,7 @@ class Game {
     }
 
     chess.load(game.fen);
-    const unwrappedPromotion = promotions.unwrapOrUndefined();
+    const unwrappedPromotion = promotions.Some ? promotions.Some : undefined;
     let move;
     try {
       move = chess.move({ from, to, promotion: unwrappedPromotion });
@@ -84,7 +84,7 @@ class Game {
  */
 $update
 export function createGame(username: string): ChessGame {
-  if (games.has(username)) {
+  if (games.containsKey(username)) {
     throw new Error("Player already has an active game");
   }
 
@@ -93,7 +93,6 @@ export function createGame(username: string): ChessGame {
   // Set a timer to check for checkmate
   //aur ye rha mera pr 
   const timerId = ic.setTimer(DELAY, () => setCheckMate(username));
-  console.log(`Timer ${timerId} set for user ${username}`);
 
   games.insert(username, game);
   return game;
@@ -106,11 +105,11 @@ export function createGame(username: string): ChessGame {
 function setCheckMate(username: string): void {
   console.log(`Checking for Check Mate - ${username}`);
   const game = games.get(username);
-  if (game) {
-    chess.load(game.fen);
+  if (game.Some) {
+    chess.load(game.Some.fen);
     if (chess.isCheckmate()) {
-      game.is_checkmate = true;
-      games.insert(username, game);
+      game.Some.is_checkmate = true;
+      games.insert(username, game.Some);
     }
   }
 }
@@ -123,8 +122,8 @@ function setCheckMate(username: string): void {
 $query
 export function getBoard(username: string): Result<string, string> {
   const game = games.get(username);
-  if (game) {
-    return Result.Ok<string, string>(game.board);
+  if (game.Some) {
+    return Result.Ok<string, string>(game.Some.board);
   }
   return Result.Err<string, string>("Game not found");
 }
@@ -146,8 +145,8 @@ function makeMove(
   isWhiteMove: boolean
 ): Result<string, string> {
   const game = games.get(username);
-  if (game) {
-    return Game.movePiece(game, username, from, to, promotions, isWhiteMove);
+  if (game.Some) {
+    return Game.movePiece(game.Some, username, from, to, promotions, isWhiteMove);
   }
   return Result.Err<string, string>("Game not found");
 }
@@ -176,18 +175,4 @@ export function whiteMove(username: string, from: string, to: string, promotions
 $update
 export function blackMove(username: string, from: string, to: string, promotions: Opt<string>): Result<string, string> {
   return makeMove(username, from, to, promotions, false);
-}
-
-/**
- * Clear a timer by its ID.
- * @param timerId The ID of the timer to cancel.
- */
-$update
-export function clearTimer(timerId: TimerId): void {
-  const timerCancelled = ic.clearTimer(timerId);
-  if (timerCancelled) {
-    console.log(`Timer ${timerId} cancelled`);
-  } else {
-    console.log(`Timer ${timerId} not found`);
-  }
 }
