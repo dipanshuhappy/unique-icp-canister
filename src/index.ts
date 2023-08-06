@@ -64,8 +64,8 @@ class Game {
     if (move) {
       game.board = chess.ascii();
       game.fen = chess.fen();
-      game.turn.White = isWhiteMove ? undefined : null;
-      game.turn.Black = isWhiteMove ? null : undefined;
+      game.turn.White = isWhiteMove ? null : undefined;
+      game.turn.Black = isWhiteMove ? undefined : null;
       if (game.is_checkmate) {
         return Result.Ok<string, string>(`${game.board}\nCheckmate!`);
       }
